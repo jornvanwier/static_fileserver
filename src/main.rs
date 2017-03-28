@@ -25,49 +25,29 @@ struct DirectoryPage<'a> {
 #[derive(Debug, Serialize)]
 struct DirectoryEntry {
     name: String,
-    path: String,
+    path: PathBuf,
 }
 
-// TODO remove directory component from path
 fn create_dir_view(path: &PathBuf) -> Template {
-    println!("Constructing dir view");
-    let mut files = Vec::new();
+    let mut result = Vec::new();
 
-    match path.read_dir() {
-        Ok(x) => {
-            for file in x {
-                files.push(match file {
-                               Ok(x) => {
-                                   match x.path().strip_prefix("files/") {
-                                       Ok(full_path) => {
-                                           if let Some(path_os_str) = x.path().file_name() {
-                                               DirectoryEntry {
-                                                   name: path_os_str.to_string_lossy().into_owned(),
-                                                   path: match full_path.to_str() {
-                                                       Some(path_str) if full_path.is_dir() => {
-                                                           path_str.to_string() + "/"
-                                                       }
-                                                       Some(path_str) => path_str.to_string(),
-                                                       None => continue,
-                                                   },
-                                               }
-                                           } else {
-                                               continue;
-                                           }
-                                       }
-                                       Err(_) => continue,
-                                   }
-                               }
-                               Err(_) => continue,
-                           })
+    if let Ok(files) = path.read_dir() {
+        for file in files {
+            if let Ok(file) = file {
+                result.push(DirectoryEntry {
+                                name: file.file_name()
+                                    .as_os_str()
+                                    .to_string_lossy()
+                                    .into_owned(),
+                                path: file.path().to_path_buf()
+                            });
             }
         }
-        Err(e) => println!("{}", e),
     }
 
     let context = DirectoryPage {
         title: path.to_str().unwrap(),
-        entries: &files,
+        entries: &result,
     };
 
     Template::render("directory", &context)
