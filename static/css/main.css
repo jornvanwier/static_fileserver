@@ -8,25 +8,35 @@ body {
 }
 
 header {
-    background-color: red;
-    color: white;
+    background-color: #c50000;
+    color: #fcfcfc;
     padding: 20px;
 }
 
 header h1 {
-    width: 65%;
+    width: 70%;
     margin: auto;
 }
 
 #filelist {
     margin: 50px auto;
-    width: 65%;
+    width: 70%;
 }
 
-#filelist li {
+#filelist ul {
     list-style: none;
+    padding-left: 0;
+    font-size: 1.5em;
 }
 
 #filelist a {
     text-decoration: none;
+}
+
+#filelist a:visited {
+    color: inherit;
+}
+
+#filelist a:hover {
+    color: #009e00
 }

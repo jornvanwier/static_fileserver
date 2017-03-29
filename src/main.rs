@@ -53,7 +53,7 @@ fn create_dir_view(path: &PathBuf) -> Template {
     }
 
     let context = DirectoryPage {
-        title: path.to_str().unwrap(),
+        title: &format!("/{}/", &path.to_string_lossy().into_owned()),
         entries: &result,
     };
 
