@@ -6,14 +6,16 @@
 
 <body>
     <header>
-        Listing files in {{title}}
+        <h1>{{title}}</h1>
     </header>
 
-    <ul>
-        {{#each entries}}
-        <li><a href='/{{this.path}}'>{{this.name}}</a></li>
-        {{/each}}
-    </ul>
+    <div id='filelist'>
+        <ul>
+            {{#each entries}}
+            <li><a href='/{{this.path}}'>{{this.name}}</a></li>
+            {{/each}}
+        </ul>
+    </div>
 </body>
 
 </html>

@@ -13,7 +13,7 @@ use rocket_contrib::Template;
 use rocket::response::NamedFile;
 use std::path::{Path, PathBuf};
 use path_dir::PathDir;
-use std::ffi::{OsStr, OsString};
+use std::fs::DirEntry;
 
 
 #[derive(Debug, Serialize)]
@@ -28,6 +28,13 @@ struct DirectoryEntry {
     path: PathBuf,
 }
 
+fn get_file_emoji(file: &DirEntry) -> String {
+    match file.path().is_dir() {
+        true => "📁".to_string(),
+        false => "📄".to_string()
+    }
+}
+
 fn create_dir_view(path: &PathBuf) -> Template {
     let mut result = Vec::new();
 
@@ -35,10 +42,10 @@ fn create_dir_view(path: &PathBuf) -> Template {
         for file in files {
             if let Ok(file) = file {
                 result.push(DirectoryEntry {
-                                name: file.file_name()
+                                name: get_file_emoji(&file) + " " + &(file.file_name()
                                     .as_os_str()
                                     .to_string_lossy()
-                                    .into_owned(),
+                                    .into_owned()),
                                 path: file.path().to_path_buf()
                             });
             }
@@ -66,9 +73,15 @@ fn get_dir(dir: PathDir) -> Template {
 // Show directory contents for root
 #[get("/files")]
 fn get_root_dir() -> Template {
-    create_dir_view(&PathBuf::from("files/"))
+    create_dir_view(&PathBuf::from("files"))
+}
+
+// Seperate css from other files
+#[get("/static/<file..>")]
+fn get_static(file: PathBuf) -> NamedFile {
+    NamedFile::open(Path::new("static/").join(file)).unwrap()
 }
 
 fn main() {
-    rocket::ignite().mount("/", routes![get_files, get_dir, get_root_dir]).launch();
+    rocket::ignite().mount("/", routes![get_files, get_dir, get_root_dir, get_static]).launch();
 }
