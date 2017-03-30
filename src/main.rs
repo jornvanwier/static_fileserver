@@ -61,8 +61,8 @@ fn create_dir_view(path: &PathBuf) -> Template {
 }
 
 #[get("/files/<file..>", rank = 1)]
-fn get_files(file: PathBuf) -> NamedFile {
-    NamedFile::open(Path::new("files/").join(file)).unwrap()
+fn get_files(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("files/").join(file)).ok()
 }
 
 #[get("/files/<dir..>", rank = 0)]
@@ -78,8 +78,8 @@ fn get_root_dir() -> Template {
 
 // Seperate css from other files
 #[get("/static/<file..>")]
-fn get_static(file: PathBuf) -> NamedFile {
-    NamedFile::open(Path::new("static/").join(file)).unwrap()
+fn get_static(file: PathBuf) -> Option<NamedFile> {
+    NamedFile::open(Path::new("static/").join(file)).ok()
 }
 
 fn main() {
