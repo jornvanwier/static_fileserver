@@ -11,9 +11,11 @@ extern crate serde_derive;
 
 use rocket_contrib::Template;
 use rocket::response::NamedFile;
+use rocket::config::{self, RocketConfig};
 use std::path::{Path, PathBuf};
 use path_dir::PathDir;
-use std::fs::DirEntry;
+use std::fs::{self, DirEntry};
+use std::env;
 
 
 #[derive(Debug, Serialize)]
@@ -53,7 +55,7 @@ fn create_dir_view(path: &PathBuf) -> Template {
     }
 
     let context = DirectoryPage {
-        title: &format!("/{}/", &path.to_string_lossy().into_owned()),
+        title: &format!("/{}/ -- {:?}", &path.to_string_lossy().into_owned(), config::active().unwrap()),
         entries: &result,
     };
 
@@ -82,6 +84,30 @@ fn get_static(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
 }
 
+fn fake_find() -> Result<PathBuf, String> {
+    let cwd = env::current_dir().map_err(|_| "no current dir".to_string())?;
+    let mut current = cwd.as_path();
+
+    loop {
+        println!("Current dir: {:?}", current);
+        let manifest = current.join("Rocket.toml");
+        if fs::metadata(&manifest).is_ok() {
+            return Ok(manifest)
+        }
+
+        match current.parent() {
+            Some(p) => current = p,
+            None => break,
+        }
+    }
+
+    Err("not found".to_string())
+}
+
 fn main() {
+    println!("Running from {:?}", env::current_dir().unwrap());
+    println!("find {:?}", fake_find().unwrap());
+    println!("Config location {:?}", RocketConfig::read().unwrap());
+    println!("Environment is {}", env::var("ROCKET_ENV").unwrap_or("not set".to_string()));
     rocket::ignite().mount("/", routes![get_files, get_dir, get_root_dir, get_static]).launch();
 }
