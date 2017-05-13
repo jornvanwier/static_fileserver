@@ -9,8 +9,14 @@ rocket_codegen = "*"
 serde = "0.9"
 serde_derive = "0.9"
 serde_json = "0.9"
+site_management = { path = "../site_management" }
 
 [dependencies.rocket_contrib]
 version = "*"
 default-features = false
 features = ["handlebars_templates"]
+
+[dependencies.multipart]
+version = "0.12.*"
+default-features = false
+features = ["server"]

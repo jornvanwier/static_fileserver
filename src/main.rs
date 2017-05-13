@@ -1,65 +1,52 @@
 #![feature(plugin)]
 #![plugin(rocket_codegen)]
 
-mod path_dir;
-
 extern crate rocket;
 extern crate rocket_contrib;
 extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
+extern crate multipart;
+extern crate site_management;
+
+mod image;
+mod directory;
+mod path_dir;
 
 use rocket_contrib::Template;
-use rocket::response::NamedFile;
-use rocket::config::{self, RocketConfig};
-use std::path::{Path, PathBuf};
+use rocket::response::{Failure, NamedFile};
+use rocket::State;
+use rocket::data::Data;
+use rocket::http::{Status, ContentType};
+use rocket::outcome::Outcome;
+use std::path::{self, Path, PathBuf};
 use path_dir::PathDir;
-use std::fs::{self, DirEntry};
 use std::env;
 
+use site_management::*;
+use site_management::user_login::*;
 
-#[derive(Debug, Serialize)]
-struct DirectoryPage<'a> {
-    title: &'a str,
-    entries: &'a Vec<DirectoryEntry>,
-}
+use directory::*;
 
-#[derive(Debug, Serialize)]
-struct DirectoryEntry {
-    name: String,
-    path: PathBuf,
-}
+#[post("/upload/<session_key>/<path..>", format = "multipart/form-data", data="<image>")]
+fn upload_file(session_key: String, path: PathBuf, image: Data, content_type: ContentType, pool: State<ConnectionPool>) -> Result<String, Failure> {
+    if let Outcome::Success(login) = UserLogin::from_key(session_key, &*pool) {
 
-fn get_file_emoji(file: &DirEntry) -> String {
-    match file.path().is_dir() {
-        true => "📁".to_string(),
-        false => "📄".to_string()
-    }
-}
-
-fn create_dir_view(path: &PathBuf) -> Template {
-    let mut result = Vec::new();
-
-    if let Ok(files) = path.read_dir() {
-        for file in files {
-            if let Ok(file) = file {
-                result.push(DirectoryEntry {
-                                name: get_file_emoji(&file) + " " + &(file.file_name()
-                                    .as_os_str()
-                                    .to_string_lossy()
-                                    .into_owned()),
-                                path: file.path().to_path_buf()
-                            });
-            }
+        if path.extension() != None || path.to_str() == None {
+            return Err(Failure(Status::BadRequest))
         }
+
+        let mut path = Path::new("files/").join(path);
+
+        println!("'{}'", &login.user.username);
+        path.push(&login.user.username);
+
+        let result = image::upload(&path, image, content_type);
+
+        Ok("ha".to_string())
     }
-
-    let context = DirectoryPage {
-        title: &format!("/{}/ -- {:?}", &path.to_string_lossy().into_owned(), config::active().unwrap()),
-        entries: &result,
-    };
-
-    Template::render("directory", &context)
+    else {
+        Err(Failure(Status::Unauthorized))
+    }
 }
 
 #[get("/files/<file..>", rank = 1)]
@@ -84,30 +71,15 @@ fn get_static(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("static/").join(file)).ok()
 }
 
-fn fake_find() -> Result<PathBuf, String> {
-    let cwd = env::current_dir().map_err(|_| "no current dir".to_string())?;
-    let mut current = cwd.as_path();
-
-    loop {
-        println!("Current dir: {:?}", current);
-        let manifest = current.join("Rocket.toml");
-        if fs::metadata(&manifest).is_ok() {
-            return Ok(manifest)
-        }
-
-        match current.parent() {
-            Some(p) => current = p,
-            None => break,
-        }
-    }
-
-    Err("not found".to_string())
-}
-
 fn main() {
     println!("Running from {:?}", env::current_dir().unwrap());
-    println!("find {:?}", fake_find().unwrap());
-    println!("Config location {:?}", RocketConfig::read().unwrap());
     println!("Environment is {}", env::var("ROCKET_ENV").unwrap_or("not set".to_string()));
-    rocket::ignite().mount("/", routes![get_files, get_dir, get_root_dir, get_static]).launch();
+    rocket::ignite().mount("/", routes![
+            upload_file,
+            get_files, 
+            get_dir, 
+            get_root_dir, 
+            get_static])
+        .manage(establish_connection_pool())
+        .launch();
 }
