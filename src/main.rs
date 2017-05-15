@@ -40,9 +40,9 @@ fn upload_file(session_key: String, path: PathBuf, image: Data, content_type: Co
         println!("'{}'", &login.user.username);
         path.push(&login.user.username);
 
-        let result = image::upload(&path, image, content_type);
+        let result = image::upload(&mut path, image, content_type);
 
-        Ok("ha".to_string())
+        result.map(|v| v.iter().map(|p| p.to_str().unwrap().to_string()).collect::<Vec<String>>().join("\n"))
     }
     else {
         Err(Failure(Status::Unauthorized))
