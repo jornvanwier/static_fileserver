@@ -23,7 +23,6 @@ pub fn upload(path: &PathBuf, data: Data, content_type: ContentType) -> Result<V
         let mut file_vec = vec![];
         
         if let Some(path) = convert_path(path) {
-            // TODO: Keep file extensions (foreach and match all files, upload each file individually)
             mp.foreach_entry(|mut field| {
                 // Who don't want to keep appending to the same file, do we?
                 let mut path = path.clone();
@@ -32,12 +31,10 @@ pub fn upload(path: &PathBuf, data: Data, content_type: ContentType) -> Result<V
                     let result = file.save().with_path(&path);
                     match result {
                         Full(file) => {
-                            println!("file {:?}", file);
                             file_vec.push(file.path);
                         },
                         Partial(file, e) => {
                             // Partial most likely means failure
-                            println!("partial {:?} {:?}", file, e);
                             remove_file(file.path);
                         },
                         Error(_) => {}
@@ -46,7 +43,9 @@ pub fn upload(path: &PathBuf, data: Data, content_type: ContentType) -> Result<V
                 });
             };
 
-            return Ok(file_vec);
+            if file_vec.len() > 0 {
+                return Ok(file_vec);
+            }
     }
     Err(Failure(Status::InternalServerError))
 }
