@@ -10,6 +10,7 @@ serde = "0.9"
 serde_derive = "0.9"
 serde_json = "0.9"
 site_management = { path = "../site_management" }
+multipart_rocket = { path = "../multipart_rocket" }
 
 [dependencies.rocket_contrib]
 version = "*"

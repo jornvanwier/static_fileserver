@@ -6,30 +6,30 @@ extern crate rocket_contrib;
 extern crate serde_json;
 #[macro_use] extern crate serde_derive;
 extern crate multipart;
+extern crate multipart_rocket;
 extern crate site_management;
 
-mod image;
 mod directory;
 mod path_dir;
 
 use rocket_contrib::Template;
 use rocket::response::{Failure, NamedFile};
-use rocket::State;
 use rocket::data::Data;
 use rocket::http::{Status, ContentType};
 use rocket::outcome::Outcome;
-use std::path::{self, Path, PathBuf};
+use std::path::{Path, PathBuf};
 use path_dir::PathDir;
 use std::env;
 
 use site_management::*;
 use site_management::user_login::*;
+use site_management::connection_from_pool::ConnectionFromPool;
 
 use directory::*;
 
 #[post("/upload/<session_key>/<path..>", format = "multipart/form-data", data="<image>")]
-fn upload_file(session_key: String, path: PathBuf, image: Data, content_type: ContentType, pool: State<ConnectionPool>) -> Result<String, Failure> {
-    if let Outcome::Success(login) = UserLogin::from_key(session_key, &*pool) {
+fn upload_file(session_key: String, path: PathBuf, image: Data, content_type: ContentType, connection: ConnectionFromPool) -> Result<String, Failure> {
+    if let Outcome::Success(login) = UserLogin::from_key(session_key, connection) {
 
         if path.extension() != None || path.to_str() == None {
             return Err(Failure(Status::BadRequest))
@@ -40,9 +40,9 @@ fn upload_file(session_key: String, path: PathBuf, image: Data, content_type: Co
         println!("'{}'", &login.user.username);
         path.push(&login.user.username);
 
-        let result = image::upload(&mut path, image, content_type);
+        let result = multipart_rocket::upload(&mut path, image, content_type);
 
-        result.map(|v| v.iter().map(|p| p.to_str().unwrap().to_string()).collect::<Vec<String>>().join("\n"))
+        result.map(|v| v.iter().map(|p| p.to_str().unwrap().to_string()).collect::<Vec<String>>().join("\n")).map_err(|_| Failure(Status::Unauthorized))
     }
     else {
         Err(Failure(Status::Unauthorized))
